@@ -1,0 +1,47 @@
+# Byte-compiled/optimized / Python cache
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Virtual Environment
+venv/
+env/
+ENV/
+
+# Project Data & Models (Recommend keeping these off GitHub if they are large)
+data/
+models/
+
+# Generated Outputs/Visualizations
+*.png
+*.jpg
+*.jpeg
+*.pdf
+xai_heatmap.png
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+
+# Jupyter Notebooks
+.ipynb_checkpoints/
