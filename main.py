@@ -72,10 +72,10 @@ def run_demonstration():
     # 5. Intelligent Adversary
     print("🔹 STEP 5 | ADVERSARIAL ML TESTING (EVASION ATTACK)")
     print("-" * 65)
-    print("  🕵️  Simulating Intelligent Adversary (FGSM)...")
+    print("  🕵️  Simulating Intelligent Adversary (PGD)...")
     attacker = AdversarialAttacker(detector.model)
     print(f"  🎯 Target: Force error BELOW threshold ({threshold:.6f})")
-    adversarial_seq = attacker.generate_fgsm_attack(sample_anomaly, epsilon=0.015, iterations=30)
+    adversarial_seq = attacker.generate_pgd_attack(sample_anomaly, epsilon=0.015, iterations=30)
     
     adv_errors = detector.compute_reconstruction_error(adversarial_seq, per_feature=False)
     adv_error = adv_errors[0]

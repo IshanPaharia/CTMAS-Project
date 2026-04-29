@@ -7,7 +7,7 @@ A robust anomaly detection and cyber-threat modeling system designed for Industr
 *   **Intelligent Detection**: Uses an LSTM Autoencoder trained on normal time-series data to detect complex, non-linear anomalies.
 *   **Explainable AI (XAI)**: Integrated Gradients are used to pinpoint WHICH specific sensor or actuator is causing the anomaly.
 *   **Semantic Reasoner**: Maps technical sensor IDs (e.g., `P101`, `MV201`) to real-world roles to calculate if the threat is a "Sensor Spoofing" or "Actuator Hijacking" attempt.
-*   **Adversarial Defense**: A separate demonstration (`main_ADVTraining.py`) utilizing **Adversarial Training (FGSM)** to defend against sophisticated ML evasion attacks.
+*   **Adversarial Defense**: A separate demonstration (`main_ADVTraining.py`) utilizing **Adversarial Training (PGD)** to defend against sophisticated ML evasion attacks.
 
 ## 📁 Repository Structure
 
@@ -36,7 +36,7 @@ pip install -r requirements.txt
     `python main_ADVTraining.py`
 
 ## 🛡️ Adversarial Knowledge
-This project explores the "White-Box" attack model where an attacker (using **FGSM/PGD**) attempts to minimize the reconstruction error of malicious traffic to bypass the IDS. The `ADVTraining` version counters this using a combined Denoising/Robust loss function.
+This project explores the "White-Box" attack model where an attacker (using **PGD**) attempts to minimize the reconstruction error of malicious traffic to bypass the IDS. The `ADVTraining` version counters this using a combined Denoising/Robust loss function.
 
 ## 📊 Mapping Documentation
 Device tags follow the CTMAS dataset standards:

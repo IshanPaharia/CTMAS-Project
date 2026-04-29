@@ -79,7 +79,7 @@ def run_demonstration():
     print(f"  🎯 Target: Force error BELOW threshold ({threshold:.6f})")
     
     # The attacker tries to find a specific value that evades detection
-    adversarial_seq = attacker.generate_fgsm_attack(sample_anomaly, epsilon=0.015, iterations=30)
+    adversarial_seq = attacker.generate_pgd_attack(sample_anomaly, epsilon=0.015, iterations=30)
     
     # 5a. Evaluation WITH Standard Defense
     adv_errors_std = detector.compute_reconstruction_error(adversarial_seq, per_feature=False, defense_mode=True)

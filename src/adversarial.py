@@ -4,7 +4,7 @@ from config import DEVICE
 class AdversarialAttacker:
     def __init__(self, model):
         """
-        Initializes an FGSM-based Intelligent Adversary.
+        Initializes a PGD-based Intelligent Adversary.
         Purpose: Evasion Attack. Attempts to perturb an Attack sample
         such that the Reconstruction Error drops below the threshold,
         tricking the system into classifying it as "Normal".
@@ -13,9 +13,9 @@ class AdversarialAttacker:
         self.model.eval()
         self.device = DEVICE
 
-    def generate_fgsm_attack(self, sequence, epsilon=0.01, iterations=10):
+    def generate_pgd_attack(self, sequence, epsilon=0.01, iterations=10):
         """
-        Generates an adversarial evasion sequence using Iterative FGSM (PGD-like without random restarts).
+        Generates an adversarial evasion sequence using Projected Gradient Descent (PGD).
         The adversary's goal is to minimize the reconstruction loss!
         """
         seq_tensor = torch.tensor(sequence, dtype=torch.float32).to(self.device).clone()
