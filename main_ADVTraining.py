@@ -71,22 +71,34 @@ def run_demonstration():
     top_anomalies = detector.get_most_anomalous_features(sample_anomaly, feature_names, top_k=3)
     xai_engine.semantic_threat_reasoning(top_anomalies)
 
-    # 5. Intelligent Adversary
+    # 5. Intelligent Adversary & Rigid Defense Evaluation
     print("🔹 STEP 5 | ADVERSARIAL ML TESTING (EVASION ATTACK)")
     print("-" * 65)
-    print("  🕵️  Simulating Intelligent Adversary (FGSM)...")
+    print("  🕵️  Simulating Intelligent Adversary (Iterative Attack)...")
     attacker = AdversarialAttacker(detector.model)
     print(f"  🎯 Target: Force error BELOW threshold ({threshold:.6f})")
+    
+    # The attacker tries to find a specific value that evades detection
     adversarial_seq = attacker.generate_fgsm_attack(sample_anomaly, epsilon=0.015, iterations=30)
     
-    # Check evasion success using defensive evaluation
-    adv_errors = detector.compute_reconstruction_error(adversarial_seq, per_feature=False, defense_mode=True)
-    adv_error = adv_errors[0]
+    # 5a. Evaluation WITH Standard Defense
+    adv_errors_std = detector.compute_reconstruction_error(adversarial_seq, per_feature=False, defense_mode=True)
+    adv_error_std = adv_errors_std[0]
     
-    print(f"\n  📉 Perturbed Reconstruction Error: {adv_error:.6f}")
-    if adv_error < threshold:
-        print("  💀 [CRITICAL] EVASION SUCCESS: The Adversary tricked the IDS!")
-        print("     The malicious payload is now classified as 'NORMAL' traffic.")
+    # 5b. Evaluation WITH Rigid Defense (Randomized Smoothing)
+    # This is "nearly rigid" because it averages over 50 noise samples
+    print("  🛡️  Applying RIGID Defense (Randomized Smoothing N=50)...")
+    adv_errors_rigid = detector.compute_reconstruction_error(adversarial_seq, per_feature=False, defense_mode=True, smoothing_samples=50)
+    adv_error_rigid = adv_errors_rigid[0]
+    
+    print(f"\n  📉 Standard Defense Error: {adv_error_std:.6f}")
+    print(f"  🧱 Rigid (Smoothed) Error:   {adv_error_rigid:.6f}")
+
+    if adv_error_rigid > threshold:
+        print("  ✅ [RIGID SUCCESS] The Smoothing Defense caught the attacker!")
+        print("     Reason: The attacker found a single hole, but the smoothing 'filled' it.")
+    elif adv_error_std < threshold:
+         print("  💀 [CRITICAL] EVASION SUCCESS: The Adversary tricked the standard IDS!")
     else:
         print("  🛡️ [SUCCESS] IDS HOLDING: The Robust Adversary failed to spoof the manifold.")
 

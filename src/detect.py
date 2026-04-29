@@ -17,31 +17,54 @@ class AnomalyDetector:
         self.threshold = None
         self.use_global_threshold = use_global_threshold
 
-    def compute_reconstruction_error(self, sequences, batch_size=256, per_feature=False, defense_mode=False):
+    def compute_reconstruction_error(self, sequences, batch_size=256, per_feature=False, defense_mode=False, smoothing_samples=0):
         """
         Computes the MSE reconstruction error.
-        If per_feature is True, returns errors shaped (N, num_features) representing the sum of errors across sequence length per feature.
-        Otherwise returns global anomalies shaped (N,).
-        If defense_mode is True, applies robust Feature Squeezing to break FGSM gradients.
+        
+        Rigidity Features:
+        - defense_mode: Applies Feature Squeezing (rounding) to break precision-based attacks.
+        - smoothing_samples: If > 0, applies Randomized Smoothing (averaging over noise). 
+          This is the most 'rigid' empirical defense available.
         """
         errors = []
         with torch.no_grad():
             for i in range(0, len(sequences), batch_size):
-                batch = sequences[i:i + batch_size]
-                batch = torch.tensor(batch, dtype=torch.float32).to(self.device)
+                batch_raw = sequences[i:i + batch_size]
+                batch = torch.tensor(batch_raw, dtype=torch.float32).to(self.device)
                 
                 if defense_mode:
-                    batch = torch.round(batch * 100) / 100.0
+                    # Feature Squeezing: Reduces the degrees of freedom for the attacker
+                    batch = torch.round(batch * 50) / 50.0
 
-                outputs = self.model(batch)
-                loss = (outputs - batch) ** 2
-                
-                if per_feature:
-                    # shape: (batch_size, seq_len, features) -> mean across seq_len
-                    batch_errors = loss.mean(dim=1)
+                if smoothing_samples > 0:
+                    # --- RANDOMIZED SMOOTHING (RIGID DEFENSE) ---
+                    # We create multiple noisy versions and average their reconstruction error
+                    # This smooths the manifold and makes it nearly impossible to find a "gap"
+                    cumulative_loss = torch.zeros(batch.shape[0], device=self.device) if not per_feature else \
+                                      torch.zeros(batch.shape[0], batch.shape[2], device=self.device)
+                    
+                    sigma = 0.02 # Noise level
+                    for _ in range(smoothing_samples):
+                        noise = torch.randn_like(batch) * sigma
+                        noisy_batch = torch.clamp(batch + noise, 0.0, 1.0)
+                        outputs = self.model(noisy_batch)
+                        loss = (outputs - noisy_batch) ** 2
+                        
+                        if per_feature:
+                            cumulative_loss += loss.mean(dim=1)
+                        else:
+                            cumulative_loss += loss.mean(dim=(1, 2))
+                    
+                    batch_errors = cumulative_loss / smoothing_samples
                 else:
-                    # global error over seq_len and features
-                    batch_errors = loss.mean(dim=(1, 2))
+                    # Standard computation
+                    outputs = self.model(batch)
+                    loss = (outputs - batch) ** 2
+                    
+                    if per_feature:
+                        batch_errors = loss.mean(dim=1)
+                    else:
+                        batch_errors = loss.mean(dim=(1, 2))
                 
                 errors.extend(batch_errors.cpu().numpy())
 

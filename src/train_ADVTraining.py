@@ -40,34 +40,49 @@ def train():
         for batch in loader:
             batch = batch.to(DEVICE)
 
-            # --- 1. Adversarial Generation (Simulating Noise) ---
-            batch_adv = batch.clone().detach().requires_grad_(True)
-            output_temp = model(batch_adv)
-            loss_temp = criterion(output_temp, batch)
+            # --- 1. Adversarial Generation (PGD - Multi-step) ---
+            # PGD is much more "rigid" than FGSM because it searches the space better
+            batch_adv = batch.clone().detach()
             
-            model.zero_grad()
-            loss_temp.backward()
+            # Hyperparameters for PGD
+            epsilon = 0.03   # Max perturbation
+            alpha = 0.01     # Step size
+            iters = 7        # Number of steps
             
-            data_grad = batch_adv.grad.data
-            epsilon = 0.015 # Train on equivalent magnitude to the attacker
+            # Start from a random point within epsilon for better coverage
+            batch_adv = batch_adv + torch.empty_like(batch_adv).uniform_(-epsilon, epsilon)
+            batch_adv = torch.clamp(batch_adv, 0.0, 1.0).detach()
+
+            for _ in range(iters):
+                batch_adv.requires_grad = True
+                output_temp = model(batch_adv)
+                loss_temp = criterion(output_temp, batch)
+                
+                model.zero_grad()
+                loss_temp.backward()
+                
+                # Maximizing reconstruction loss (Attacker's goal in training is to be strong)
+                with torch.no_grad():
+                    adv_grad = batch_adv.grad.sign()
+                    batch_adv = batch_adv + alpha * adv_grad
+                    
+                    # Project back to epsilon ball and valid range
+                    eta = torch.clamp(batch_adv - batch, -epsilon, epsilon)
+                    batch_adv = torch.clamp(batch + eta, 0.0, 1.0).detach()
             
-            # Create adversarial example by maximizing loss
-            perturbed_batch = batch_adv + epsilon * torch.sign(data_grad)
-            perturbed_batch = torch.clamp(perturbed_batch, 0.0, 1.0).detach()
-            
-            # --- 2. Robust Training (Clean + Noisy) ---
+            # --- 2. Robust Training (Clean + PGD Noisy) ---
             optimizer.zero_grad()
             
             # Clean loss
             output_clean = model(batch)
             clean_loss = criterion(output_clean, batch)
             
-            # Robust loss (Target is still the clean batch!)
-            output_robust = model(perturbed_batch)
+            # Robust loss
+            output_robust = model(batch_adv)
             robust_loss = criterion(output_robust, batch)
             
-            # Combined Loss
-            total_batch_loss = clean_loss + robust_loss
+            # Combined Loss (Weighting robust loss higher helps rigidity)
+            total_batch_loss = clean_loss + 1.5 * robust_loss
             
             total_batch_loss.backward()
             optimizer.step()
