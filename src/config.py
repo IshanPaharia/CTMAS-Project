@@ -18,7 +18,7 @@ SCALER_PATH = os.path.join(MODELS_DIR, "scaler.pkl")
 # Hyperparameters
 SEQUENCE_LENGTH = 50
 BATCH_SIZE = 64
-EPOCHS = 3
+EPOCHS = 20
 LEARNING_RATE = 1e-3
 N_FEATURES = 51
 
